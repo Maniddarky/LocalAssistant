@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Folder, Lock, Menu, MessageSquare, Plus, Settings, Sparkles } from 'lucide-react'
+import { Folder, Lock, Menu, MessageSquare, Plus, Settings, Sparkles, Trash2 } from 'lucide-react'
 import { ChatPane } from '@/components/ChatPane'
 import { CollectionsView } from '@/components/CollectionsView'
 import { LibraryPanel } from '@/components/LibraryPanel'
@@ -56,6 +56,7 @@ export default function App() {
   const [uploading, setUploading] = useState(false)
   const [asking, setAsking] = useState(false)
   const [offline, setOffline] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const activeChat = chats.find((chat) => chat.id === activeChatId) ?? chats[0]
   const messages = activeChat?.messages ?? []
@@ -209,6 +210,31 @@ export default function App() {
     setActiveChatId(chat.id)
     setView('chat')
     setNavOpen(false)
+    setConfirmClear(false)
+  }
+
+  function deleteChat(id: string) {
+    const remaining = chats.filter((chat) => chat.id !== id)
+    if (remaining.length === 0) {
+      const fresh = blankChat()
+      setChats([fresh])
+      setActiveChatId(fresh.id)
+      return
+    }
+    setChats(remaining)
+    if (activeChat?.id === id) setActiveChatId(remaining[0].id)
+  }
+
+  function clearHistory() {
+    if (!confirmClear) {
+      setConfirmClear(true)
+      return
+    }
+    const fresh = blankChat()
+    setChats([fresh])
+    setActiveChatId(fresh.id)
+    setConfirmClear(false)
+    setView('chat')
   }
 
   const latestAnswer = useMemo(
@@ -245,20 +271,34 @@ export default function App() {
         <NavButton icon={<Settings className="size-4" />} label="Settings" active={false} onClick={() => setSettingsOpen(true)} />
       </nav>
       <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-3">
-        <p className="px-2 text-xs font-medium text-muted-foreground">Recent</p>
+        <div className="flex items-center justify-between px-2">
+          <p className="text-xs font-medium text-muted-foreground">Recent</p>
+          <button type="button" className="text-xs text-muted-foreground hover:text-destructive" onClick={clearHistory}>
+            {confirmClear ? 'Confirm clear' : 'Clear history'}
+          </button>
+        </div>
         <ul className="mt-2 grid gap-1">
           {chats.map((chat) => (
-            <li key={chat.id}>
+            <li key={chat.id} className="group flex items-center gap-1">
               <button
                 type="button"
-                className={`w-full truncate rounded-xl px-3 py-2 text-left text-sm ${chat.id === activeChat?.id && view === 'chat' ? 'bg-secondary text-secondary-foreground' : 'hover:bg-muted'}`}
+                className={`min-w-0 flex-1 truncate rounded-xl px-3 py-2 text-left text-sm ${chat.id === activeChat?.id && view === 'chat' ? 'bg-secondary text-secondary-foreground' : 'hover:bg-muted'}`}
                 onClick={() => {
                   setActiveChatId(chat.id)
                   setView('chat')
                   setNavOpen(false)
+                  setConfirmClear(false)
                 }}
               >
                 {chat.title}
+              </button>
+              <button
+                type="button"
+                className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Delete ${chat.title}`}
+                onClick={() => deleteChat(chat.id)}
+              >
+                <Trash2 className="size-3.5" />
               </button>
             </li>
           ))}
