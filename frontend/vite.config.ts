@@ -12,11 +12,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'Ground School',
-        short_name: 'Ground School',
-        description: 'Local aviation study desk for your handbooks.',
-        theme_color: '#12181f',
-        background_color: '#12181f',
+        name: 'Local AI',
+        short_name: 'Local AI',
+        description: 'A private AI workspace. Your files stay on this device.',
+        theme_color: '#6d4dff',
+        background_color: '#f5f4fa',
         display: 'standalone',
         start_url: '/',
         icons: [

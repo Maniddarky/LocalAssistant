@@ -65,6 +65,7 @@ export async function askQuestion(
   question: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   settings: LlmSettings,
+  documentIds: string[] = [],
 ): Promise<AskResult> {
   const response = await fetch('/api/ask', {
     method: 'POST',
@@ -72,6 +73,7 @@ export async function askQuestion(
     body: JSON.stringify({
       question,
       history,
+      documentIds,
       llm: {
         enabled: settings.llmEnabled,
         baseUrl: settings.baseUrl,

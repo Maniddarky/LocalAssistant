@@ -19,14 +19,7 @@ type LibraryPanelProps = {
   onDelete: (id: string) => void
 }
 
-export function LibraryPanel({
-  documents,
-  indexing,
-  uploading,
-  error,
-  onUpload,
-  onDelete,
-}: LibraryPanelProps) {
+export function LibraryPanel({ documents, indexing, uploading, error, onUpload, onDelete }: LibraryPanelProps) {
   const [armedId, setArmedId] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -48,14 +41,12 @@ export function LibraryPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="px-4 pt-4 pb-2">
-        <p className="font-mono text-[11px] tracking-[0.16em] text-primary uppercase">Library</p>
-        <h2 className="mt-1 font-serif text-xl text-foreground">Handbooks on this machine</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Answers are retrieved from these PDFs. A scan without a text layer cannot be searched.
-        </p>
-      </div>
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col px-6 py-8">
+      <p className="text-sm text-muted-foreground">Knowledge</p>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Files on this device</h2>
+      <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+        Answers are retrieved from these PDFs. A scan without a text layer cannot be searched.
+      </p>
 
       <label
         onDragOver={(event) => {
@@ -64,12 +55,12 @@ export function LibraryPanel({
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mx-4 mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-5 text-center transition-colors ${
-          dragging ? 'border-primary bg-primary/10' : 'border-border bg-card/60 hover:border-primary/60'
+        className={`mt-6 flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center ${
+          dragging ? 'border-primary bg-secondary' : 'border-border bg-card hover:border-primary/50'
         }`}
       >
         <Upload className="size-4 text-primary" />
-        <span className="text-sm">{uploading ? 'Reading the PDF…' : 'Drop a PDF or choose a file'}</span>
+        <span className="text-sm font-medium">{uploading ? 'Reading the PDF…' : 'Drop a PDF or choose a file'}</span>
         <span className="text-xs text-muted-foreground">Up to 40 MB, text layer required</span>
         <input
           type="file"
@@ -83,26 +74,24 @@ export function LibraryPanel({
         />
       </label>
 
-      {localError || error ? <p className="mx-4 mt-3 text-sm text-destructive">{localError || error}</p> : null}
+      {localError || error ? <p className="mt-3 text-sm text-destructive">{localError || error}</p> : null}
 
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
         {indexing && documents.length === 0 ? (
-          <p className="rounded-lg bg-card px-3 py-4 text-sm text-muted-foreground">
-            Indexing the sample desk notes…
-          </p>
+          <p className="rounded-2xl bg-card px-4 py-4 text-sm text-muted-foreground">Indexing your files…</p>
         ) : null}
         {!indexing && documents.length === 0 ? (
-          <p className="rounded-lg bg-card px-3 py-4 text-sm text-muted-foreground">
-            No handbooks yet. Upload a text-based PDF, or restart the API if the sample notes did not finish indexing.
+          <p className="rounded-2xl bg-card px-4 py-4 text-sm text-muted-foreground">
+            No files yet. Add a text-based PDF, then ask about it in a chat.
           </p>
         ) : null}
         <ul className="grid gap-2">
           {documents.map((doc) => (
-            <li key={doc.id} className="rounded-xl border border-border bg-card px-3 py-3">
+            <li key={doc.id} className="rounded-2xl border border-border bg-card px-4 py-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{doc.name}</p>
-                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {doc.pages} {doc.pages === 1 ? 'page' : 'pages'} · {doc.chunks} passages · {formatBytes(doc.bytes)}
                   </p>
                 </div>

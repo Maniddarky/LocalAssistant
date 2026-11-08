@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react'
-import { Mic, Send, Volume2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Copy, Mic, RotateCcw, Send, Sparkles, Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { transcribeClip } from '@/lib/api'
 import { browserRecognitionAvailable, createRecognition, speakAnswer } from '@/lib/speech'
 import type { ChatMessage, DeskStatus } from '@/lib/types'
-
-const SUGGESTIONS = [
-  'What is density altitude in the desk notes?',
-  'Which traffic pattern legs does the sample name?',
-  'When does the sample say carburetor ice is possible?',
-]
 
 type ChatPaneProps = {
   messages: ChatMessage[]
@@ -20,13 +13,16 @@ type ChatPaneProps = {
   indexing: boolean
   stt: DeskStatus['stt'] | undefined
   onAsk: (question: string, spoken: boolean) => Promise<void>
+  onAttach: (file: File) => void
 }
 
-export function ChatPane({ messages, asking, hasLibrary, indexing, stt, onAsk }: ChatPaneProps) {
+export function ChatPane({ messages, asking, hasLibrary, indexing, stt, onAsk, onAttach }: ChatPaneProps) {
   const [draft, setDraft] = useState('')
   const [listening, setListening] = useState(false)
   const [voiceError, setVoiceError] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const heardRef = useRef('')
@@ -147,90 +143,92 @@ export function ChatPane({ messages, asking, hasLibrary, indexing, stt, onAsk }:
     void beginCapture()
   }
 
+  const lastUser = [...messages].reverse().find((message) => message.role === 'user')
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-8">
+      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 py-8 md:px-10">
         {messages.length === 0 ? (
-          <div className="mx-auto flex max-w-2xl flex-col gap-6 pt-6 md:pt-12">
-            <div>
-              <p className="font-mono text-[11px] tracking-[0.16em] text-primary uppercase">Briefing</p>
-              <h2 className="mt-2 font-serif text-3xl text-foreground md:text-4xl">Ask the books on this desk.</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-                {indexing && !hasLibrary
-                  ? 'The sample notes are being indexed. You can type a question as soon as they appear in the library.'
-                  : hasLibrary
-                    ? 'Questions are answered from the PDFs in the library, with the document name and page attached. A language model is optional.'
-                    : 'The library is empty. Upload a handbook, then ask about something inside it.'}
-              </p>
-            </div>
-            {hasLibrary ? (
-              <div className="grid gap-2">
-                {SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm hover:border-primary/60"
-                    onClick={() => void submit(suggestion, false)}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+          <div className="mx-auto flex max-w-2xl flex-col items-center pt-16 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
+              <Sparkles className="size-5" />
+            </span>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight">Ask anything about your files</h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              {indexing && !hasLibrary
+                ? 'Files are being indexed. You can ask as soon as they appear in Knowledge.'
+                : hasLibrary
+                  ? 'Questions are answered from the PDFs on this device, with the file name and page attached.'
+                  : 'Add a PDF in Knowledge, then ask about something inside it.'}
+            </p>
           </div>
         ) : (
-          <ol className="mx-auto grid max-w-2xl gap-5">
+          <ol className="mx-auto grid max-w-2xl gap-6">
             {messages.map((message) => (
-              <li key={message.id} className={message.role === 'user' ? 'flex justify-end' : ''}>
+              <li key={message.id} className={message.role === 'user' ? 'flex justify-end' : 'flex gap-3'}>
+                {message.role === 'assistant' ? (
+                  <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
+                    <Sparkles className="size-4" />
+                  </span>
+                ) : null}
                 {message.role === 'user' ? (
-                  <p className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6">
-                    {message.content}
-                  </p>
+                  <div className="max-w-[80%]">
+                    <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground">
+                      {message.content}
+                    </p>
+                  </div>
+                ) : message.pending ? (
+                  <p className="pt-2 text-sm text-muted-foreground">Looking through your files…</p>
                 ) : (
-                  <article className="max-w-full">
-                    {message.pending ? (
-                      <p className="text-sm text-muted-foreground">Looking through the library…</p>
-                    ) : (
-                      <>
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <Badge variant={message.mode === 'llm' ? 'default' : 'outline'}>
-                            {message.mode === 'llm' ? 'Model' : 'Quoted'}
-                          </Badge>
-                          {message.error ? <Badge variant="destructive">Not sent</Badge> : null}
-                        </div>
-                        {message.notice ? <p className="mb-2 text-sm text-primary">{message.notice}</p> : null}
-                        <p className="text-sm leading-6 whitespace-pre-wrap">{message.content}</p>
-                        {message.citations && message.citations.length > 0 ? (
-                          <div className="mt-3 grid gap-2">
-                            {message.citations.map((citation) => (
-                              <figure
-                                key={`${citation.documentId}-${citation.page}-${citation.excerpt.slice(0, 24)}`}
-                                className="border-l-2 border-primary/80 bg-card/80 px-3 py-2"
-                              >
-                                <figcaption className="font-mono text-[11px] tracking-wide text-primary uppercase">
-                                  {citation.document} · p. {citation.page}
-                                </figcaption>
-                                <blockquote className="mt-1 text-sm leading-5 text-muted-foreground">
-                                  {citation.excerpt}
-                                </blockquote>
-                              </figure>
-                            ))}
+                  <article className="min-w-0 flex-1">
+                    {message.notice ? <p className="mb-2 text-sm text-primary">{message.notice}</p> : null}
+                    <p className="text-sm leading-6 whitespace-pre-wrap">{message.content}</p>
+                    {message.citations && message.citations.length > 0 ? (
+                      <div className="mt-3 grid gap-2">
+                        {message.citations.map((citation) => (
+                          <div
+                            key={`${citation.documentId}-${citation.page}-${citation.excerpt.slice(0, 20)}`}
+                            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                          >
+                            <span className="grid size-7 place-items-center rounded-md bg-red-50 text-[10px] font-semibold text-red-600">PDF</span>
+                            <span className="truncate">
+                              {citation.document} · Page {citation.page}
+                            </span>
                           </div>
-                        ) : null}
-                        {!message.error && message.content ? (
+                        ))}
+                      </div>
+                    ) : null}
+                    {!message.error ? (
+                      <div className="mt-2 flex gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Copy answer"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(message.content)
+                            setCopiedId(message.id)
+                          }}
+                        >
+                          <Copy />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon-sm" aria-label="Speak answer" onClick={() => void speakAnswer(message.content)}>
+                          <Volume2 />
+                        </Button>
+                        {lastUser ? (
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
-                            className="mt-2 px-2 text-muted-foreground"
-                            onClick={() => void speakAnswer(message.content)}
+                            size="icon-sm"
+                            aria-label="Ask again"
+                            onClick={() => void submit(lastUser.content, false)}
                           >
-                            <Volume2 />
-                            Speak
+                            <RotateCcw />
                           </Button>
                         ) : null}
-                      </>
-                    )}
+                        {copiedId === message.id ? <span className="self-center text-xs text-muted-foreground">Copied</span> : null}
+                      </div>
+                    ) : null}
                   </article>
                 )}
               </li>
@@ -239,8 +237,8 @@ export function ChatPane({ messages, asking, hasLibrary, indexing, stt, onAsk }:
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="border-t border-border px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-8">
-        <div className="mx-auto flex max-w-2xl items-end gap-2">
+      <form onSubmit={onSubmit} className="px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-10">
+        <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card px-3 py-2 shadow-sm">
           <Textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
@@ -251,38 +249,52 @@ export function ChatPane({ messages, asking, hasLibrary, indexing, stt, onAsk }:
               }
             }}
             rows={2}
-            placeholder={listening ? 'Listening…' : 'Ask about a page in the library'}
-            className="min-h-16 resize-none bg-card"
+            placeholder={listening ? 'Listening…' : 'Ask anything about your files or beyond...'}
+            className="min-h-12 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
             aria-label="Question"
           />
-          <Button
-            type="button"
-            variant={listening ? 'default' : 'outline'}
-            size="icon-lg"
-            aria-pressed={listening}
-            aria-label={listening ? 'Release to send speech' : 'Hold to talk'}
-            title="Hold to talk"
-            disabled={asking}
-            onPointerDown={onPointerDown}
-            onPointerUp={stopCapture}
-            onPointerCancel={stopCapture}
-            onContextMenu={(event) => event.preventDefault()}
-          >
-            <Mic />
-          </Button>
-          <Button type="submit" size="icon-lg" disabled={asking || !draft.trim()} aria-label="Send question">
-            <Send />
-          </Button>
+          <div className="flex items-center gap-1 px-1 pb-1">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) onAttach(file)
+                event.target.value = ''
+              }}
+            />
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="Attach a PDF" onClick={() => fileRef.current?.click()}>
+              <span className="text-base leading-none">＋</span>
+            </Button>
+            <p className="mr-auto text-xs text-muted-foreground">
+              {voiceError ? voiceError : 'Enter to send · Shift+Enter for a new line'}
+            </p>
+            <Button
+              type="button"
+              variant={listening ? 'default' : 'ghost'}
+              size="icon"
+              aria-pressed={listening}
+              aria-label={listening ? 'Release to send speech' : 'Hold to talk'}
+              disabled={asking}
+              onPointerDown={onPointerDown}
+              onPointerUp={stopCapture}
+              onPointerCancel={stopCapture}
+              onContextMenu={(event) => event.preventDefault()}
+            >
+              <Mic />
+            </Button>
+            <Button type="submit" size="icon" className="rounded-full" disabled={asking || !draft.trim()} aria-label="Send question">
+              <Send />
+            </Button>
+          </div>
         </div>
-        <p className="mx-auto mt-2 max-w-2xl text-xs text-muted-foreground">
-          {voiceError
-            ? voiceError
-            : listening
-              ? 'Release to send what you said.'
-              : browserRecognitionAvailable() || stt === 'faster-whisper'
-                ? 'Hold the microphone while you speak. Shift+Enter adds a line.'
-                : 'Voice input needs Chrome or Edge on this machine, unless Faster-Whisper is installed.'}
-        </p>
+        {!browserRecognitionAvailable() && stt !== 'faster-whisper' ? (
+          <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-muted-foreground">
+            Voice input needs Chrome or Edge, unless Faster-Whisper is installed.
+          </p>
+        ) : null}
       </form>
     </div>
   )

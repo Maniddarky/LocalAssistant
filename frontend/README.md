@@ -1,6 +1,6 @@
-# Ground School web app
+# Local AI web app
 
-The interface for the local study desk. Setup, the API, and voice options are documented in the repository root [README](../README.md).
+The interface for the private workspace. Setup, the API, and voice options are documented in the repository root [README](../README.md).
 
 ```bash
 npm install

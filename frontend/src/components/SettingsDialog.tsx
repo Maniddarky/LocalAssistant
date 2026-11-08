@@ -31,7 +31,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onChange, status 
         <DialogHeader>
           <DialogTitle className="font-serif text-xl">Model connection</DialogTitle>
           <DialogDescription>
-            Leave this off to quote passages from your PDFs. Turn it on to send the question and those passages to an
+            Leave this off to quote passages from your files. Turn it on to send the question and those passages to an
             OpenAI-compatible server, such as Ollama on this machine. The key stays in this browser.
           </DialogDescription>
         </DialogHeader>

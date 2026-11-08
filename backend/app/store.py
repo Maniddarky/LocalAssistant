@@ -11,8 +11,7 @@ from typing import Any
 import pymupdf
 
 from app.chunking import chunk_page
-from app.paths import CHROMA, LIBRARY_FILE, PDFS, SAMPLE_NAME, ensure_dirs
-from app.sample_notes import write_sample_pdf
+from app.paths import CHROMA, LIBRARY_FILE, PDFS, ensure_dirs
 
 _lock = threading.Lock()
 _collection = None
@@ -191,15 +190,21 @@ def delete_document(doc_id: str) -> bool:
     return True
 
 
-def retrieve(question: str, k: int = 4) -> list[dict[str, Any]]:
+def retrieve(question: str, k: int = 4, document_ids: list[str] | None = None) -> list[dict[str, Any]]:
     col = collection()
     if col.count() == 0:
         return []
-    result = col.query(
-        query_texts=[question],
-        n_results=min(k, col.count()),
-        include=["documents", "metadatas", "distances"],
-    )
+    where = None
+    if document_ids:
+        where = {"document_id": {"$in": document_ids}} if len(document_ids) > 1 else {"document_id": document_ids[0]}
+    query: dict[str, Any] = {
+        "query_texts": [question],
+        "n_results": min(k, col.count()),
+        "include": ["documents", "metadatas", "distances"],
+    }
+    if where is not None:
+        query["where"] = where
+    result = col.query(**query)
     docs = (result.get("documents") or [[]])[0]
     metas = (result.get("metadatas") or [[]])[0]
     distances = (result.get("distances") or [[]])[0]
@@ -220,21 +225,10 @@ def retrieve(question: str, k: int = 4) -> list[dict[str, Any]]:
 
 
 def seed_sample_if_needed() -> None:
-    global _indexing, _index_error
     ensure_dirs()
     if LIBRARY_FILE.exists():
         return
-    _indexing = True
-    _index_error = None
-    try:
-        sample_path = PDFS / "_sample_source.pdf"
-        write_sample_pdf(sample_path)
-        add_pdf(sample_path.read_bytes(), SAMPLE_NAME, sample=True)
-        sample_path.unlink(missing_ok=True)
-    except Exception as exc:  # noqa: BLE001
-        _index_error = str(exc)
-    finally:
-        _indexing = False
+    _write_catalog([])
 
 
 def _safe_name(name: str) -> str:

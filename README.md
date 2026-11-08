@@ -1,8 +1,6 @@
-# Ground School
+# Local AI
 
-A local aviation study desk. Upload a PDF handbook, ask a question, and read the answer next to the document name and page it came from. Speech is push-to-talk. Nothing is sent to a model unless you turn that on.
-
-This is a study aid. It is not a substitute for current official publications, a flight instructor, or a decision in the airplane.
+A private workspace for your own files. Upload a PDF, ask a question, and read the answer next to the file name and page it came from. Speech is push-to-talk. Nothing is sent to a model unless you turn that on.
 
 ## What you can do
 
@@ -11,7 +9,7 @@ This is a study aid. It is not a substitute for current official publications, a
 - Hold the microphone to talk. Chrome and Edge can recognize speech in the browser. A reply can be spoken back.
 - Optionally connect any OpenAI-compatible server (Ollama on this machine, or a cloud API). The key stays in the browser.
 
-A short original sample, **Ground School Desk Notes**, is indexed on first launch so you can try a question before you upload anything.
+The library starts empty. Add your own text PDFs from Knowledge.
 
 ## Run it locally
 

@@ -1,4 +1,4 @@
-"""Ground School API."""
+"""Local AI API."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Ground School", lifespan=lifespan)
+app = FastAPI(title="Local AI", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -69,6 +69,7 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
     history: list[Turn] = []
     llm: LlmSettings = LlmSettings()
+    documentIds: list[str] = []
 
 
 class SpeakRequest(BaseModel):
@@ -95,7 +96,7 @@ def _status_payload(llm: LlmSettings | None = None) -> dict:
 
 def _excerpt_answer(hits: list[dict], loose: bool) -> str:
     lines = [
-        "No language model wrote this. It is quoted from your library so you can check the page yourself."
+        "This answer is quoted from your files so you can check the page."
     ]
     if loose:
         lines.append("These are the closest passages, and they may only partly match the question.")
@@ -172,19 +173,19 @@ def ask(body: AskRequest) -> dict:
     question = body.question.strip()
     if indexing() and not list_documents():
         return {
-            "answer": "The sample notes are still being indexed on this machine. Ask again in a moment.",
+            "answer": "Your files are still being indexed. Ask again in a moment.",
             "citations": [],
             "mode": "excerpts",
             "notice": None,
         }
     try:
-        hits = retrieve(question)
+        hits = retrieve(question, document_ids=body.documentIds or None)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Search failed ({exc}).") from exc
 
     if not hits:
         return {
-            "answer": "The library has no searchable text yet. Upload a PDF that contains a text layer.",
+            "answer": "Nothing in the selected files matched that question. Upload a text PDF, or choose All files.",
             "citations": [],
             "mode": "excerpts",
             "notice": None,

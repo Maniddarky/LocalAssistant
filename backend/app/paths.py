@@ -8,8 +8,6 @@ MODELS = DATA / "models"
 PIPER_DIR = MODELS / "piper"
 LIBRARY_FILE = DATA / "library.json"
 
-SAMPLE_NAME = "Ground School Desk Notes.pdf"
-
 
 def ensure_dirs() -> None:
     PDFS.mkdir(parents=True, exist_ok=True)

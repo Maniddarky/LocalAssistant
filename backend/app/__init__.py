@@ -1,1 +1,1 @@
-"""Ground School local API."""
+"""Local AI API."""
