@@ -1,0 +1,21 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8765:8765"
+    environment:
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    volumes:
+      - school-data:/app/data
+
+  web:
+    build: ./frontend
+    ports:
+      - "4317:80"
+    depends_on:
+      - api
+
+volumes:
+  school-data:
